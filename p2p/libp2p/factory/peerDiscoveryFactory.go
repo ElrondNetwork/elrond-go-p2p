@@ -5,7 +5,7 @@ import (
 
 	"github.com/ElrondNetwork/elrond-go-p2p/config"
 	"github.com/ElrondNetwork/elrond-go-p2p/p2p"
-	"github.com/ElrondNetwork/elrond-go-p2p/p2p/discovery"
+	"github.com/ElrondNetwork/elrond-go-p2p/p2p/libp2p/discovery"
 )
 
 //TODO change this to method factory pattern, something like

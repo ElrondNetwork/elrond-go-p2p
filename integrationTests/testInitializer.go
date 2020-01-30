@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/ElrondNetwork/elrond-go-p2p/p2p"
-	"github.com/ElrondNetwork/elrond-go-p2p/p2p/discovery"
 	"github.com/ElrondNetwork/elrond-go-p2p/p2p/libp2p"
+	"github.com/ElrondNetwork/elrond-go-p2p/p2p/libp2p/discovery"
 	"github.com/btcsuite/btcd/btcec"
 	libp2pCrypto "github.com/libp2p/go-libp2p-core/crypto"
 )
