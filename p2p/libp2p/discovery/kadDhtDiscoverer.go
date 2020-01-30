@@ -19,9 +19,6 @@ const (
 	kadDhtName       = "kad-dht discovery"
 )
 
-var peerDiscoveryTimeout = 10 * time.Second
-var noOfQueries = 1
-
 // ArgKadDht represents the kad-dht config argument DTO
 type ArgKadDht struct {
 	PeersRefreshInterval time.Duration
@@ -116,12 +113,6 @@ func (kdd *KadDhtDiscoverer) connectToInitialAndBootstrap() {
 		kdd.initialPeersList,
 	)
 
-	cfg := dht.BootstrapConfig{
-		Period:  kdd.peersRefreshInterval,
-		Queries: noOfQueries,
-		Timeout: peerDiscoveryTimeout,
-	}
-
 	go func() {
 		<-chanStartBootstrap
 
@@ -130,7 +121,7 @@ func (kdd *KadDhtDiscoverer) connectToInitialAndBootstrap() {
 			i := 1
 			for {
 				if kdd.initConns {
-					err := kdd.kadDHT.BootstrapOnce(kdd.ctx, cfg)
+					err := kdd.kadDHT.Bootstrap(kdd.ctx)
 					if err == kbucket.ErrLookupFailure {
 						<-kdd.ReconnectToNetwork()
 					}

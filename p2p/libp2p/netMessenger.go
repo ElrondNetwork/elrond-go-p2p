@@ -31,6 +31,7 @@ type networkMessenger struct {
 	host           host.Host
 	ctx            context.Context
 	mutProcessors  sync.RWMutex
+	topics         map[string]*pubsub.Topic
 	processors     map[string]p2p.MessageProcessor
 	pb             *pubsub.PubSub
 	publishChan    chan *p2p.SendableData
@@ -99,6 +100,7 @@ func createMessenger(
 		ctx:            ctx,
 		pb:             pb,
 		processors:     make(map[string]p2p.MessageProcessor),
+		topics:         make(map[string]*pubsub.Topic),
 		publishChan:    make(chan *p2p.SendableData),
 		peerDiscoverer: peerDiscoverer,
 	}
@@ -111,9 +113,17 @@ func createMessenger(
 				continue
 			}
 
-			err := pubsub.Publish(sendableData.Topic, sendableData.Buff)
-			if err != nil {
-				fmt.Printf("error publishing: %s\n", err.Error())
+			netMes.mutProcessors.RLock()
+			topic := netMes.topics[sendableData.Topic]
+			netMes.mutProcessors.RUnlock()
+
+			if topic != nil {
+				err := topic.Publish(context.Background(), sendableData.Buff)
+				if err != nil {
+					fmt.Printf("error publishing: %s\n", err.Error())
+				}
+			} else {
+				fmt.Printf("error publishing: not joined on topic %s\n", sendableData.Topic)
 			}
 
 			time.Sleep(durationBetweenSends)
@@ -238,15 +248,21 @@ func (netMes *networkMessenger) Bootstrap() error {
 // CreateTopic opens a new topic using pubsub infrastructure
 func (netMes *networkMessenger) CreateTopic(name string, _ bool) error {
 	netMes.mutProcessors.Lock()
-	_, found := netMes.processors[name]
+	defer netMes.mutProcessors.Unlock()
+	_, found := netMes.topics[name]
 	if found {
-		netMes.mutProcessors.Unlock()
 		return p2p.ErrTopicAlreadyExists
 	}
 
 	netMes.processors[name] = nil
-	subscrRequest, err := netMes.pb.Subscribe(name)
-	netMes.mutProcessors.Unlock()
+	topic, err := netMes.pb.Join(name)
+	if err != nil {
+		return err
+	}
+
+	netMes.topics[name] = topic
+
+	subscrRequest, err := topic.Subscribe()
 	if err != nil {
 		return err
 	}
@@ -264,7 +280,7 @@ func (netMes *networkMessenger) CreateTopic(name string, _ bool) error {
 // HasTopic returns true if the topic has been created
 func (netMes *networkMessenger) HasTopic(name string) bool {
 	netMes.mutProcessors.RLock()
-	_, found := netMes.processors[name]
+	_, found := netMes.topics[name]
 	netMes.mutProcessors.RUnlock()
 
 	return found
