@@ -141,6 +141,7 @@ func createMessenger(
 func createPubSub(host host.Host, ctx context.Context, withSigning bool) (*pubsub.PubSub, error) {
 	optsPS := []pubsub.Option{
 		pubsub.WithMessageSigning(withSigning),
+		pubsub.WithPeerOutboundQueueSize(1000),
 	}
 
 	pubsub.TimeCacheDuration = pubsubTimeCacheDuration
