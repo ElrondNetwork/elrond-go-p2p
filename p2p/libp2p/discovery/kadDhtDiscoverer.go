@@ -125,7 +125,7 @@ func (kdd *KadDhtDiscoverer) connectToInitialAndBootstrap() {
 		kdd.mutKadDht.Lock()
 		go func() {
 			for {
-				err := kdd.kadDHT.Bootstrap(kdd.ctx)
+				err := kdd.kadDHT.BootstrapOnce(kdd.ctx, cfg)
 				if err == kbucket.ErrLookupFailure {
 					<-kdd.ReconnectToNetwork()
 				}
