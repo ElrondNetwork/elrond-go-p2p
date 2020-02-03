@@ -15,8 +15,7 @@ import (
 )
 
 const (
-	initReconnectMul = 20
-	kadDhtName       = "kad-dht discovery"
+	kadDhtName = "kad-dht discovery"
 )
 
 // ArgKadDht represents the kad-dht config argument DTO
@@ -38,7 +37,6 @@ type KadDhtDiscoverer struct {
 	randezVous           string
 	initialPeersList     []string
 	routingTableRefresh  time.Duration
-	initConns            bool // Initiate new connections
 	bucketSize           uint32
 }
 
@@ -63,7 +61,6 @@ func NewKadDhtPeerDiscoverer(arg ArgKadDht) (*KadDhtDiscoverer, error) {
 		initialPeersList:     arg.InitialPeersList,
 		bucketSize:           arg.BucketSize,
 		routingTableRefresh:  arg.RoutingTableRefresh,
-		initConns:            true,
 	}, nil
 }
 
@@ -118,21 +115,12 @@ func (kdd *KadDhtDiscoverer) connectToInitialAndBootstrap() {
 
 		kdd.mutKadDht.Lock()
 		go func() {
-			i := 1
 			for {
-				if kdd.initConns {
-					err := kdd.kadDHT.Bootstrap(kdd.ctx)
-					if err == kbucket.ErrLookupFailure {
-						<-kdd.ReconnectToNetwork()
-					}
-					i = 1
-				} else {
-					i++
-					if (i % initReconnectMul) == 0 {
-						<-kdd.ReconnectToNetwork()
-						i = 1
-					}
+				err := kdd.kadDHT.Bootstrap(kdd.ctx)
+				if err == kbucket.ErrLookupFailure {
+					<-kdd.ReconnectToNetwork()
 				}
+
 				select {
 				case <-time.After(kdd.peersRefreshInterval):
 				case <-kdd.ctx.Done():
@@ -210,27 +198,6 @@ func (kdd *KadDhtDiscoverer) ReconnectToNetwork() <-chan struct{} {
 		kdd.peersRefreshInterval,
 		kdd.initialPeersList,
 	)
-}
-
-// Pause will suspend the discovery process
-func (kdd *KadDhtDiscoverer) Pause() {
-	kdd.mutKadDht.Lock()
-	defer kdd.mutKadDht.Unlock()
-	kdd.initConns = false
-}
-
-// Resume will resume the discovery process
-func (kdd *KadDhtDiscoverer) Resume() {
-	kdd.mutKadDht.Lock()
-	defer kdd.mutKadDht.Unlock()
-	kdd.initConns = true
-}
-
-// IsDiscoveryPaused will return true if the discoverer is initiating connections
-func (kdd *KadDhtDiscoverer) IsDiscoveryPaused() bool {
-	kdd.mutKadDht.Lock()
-	defer kdd.mutKadDht.Unlock()
-	return !kdd.initConns
 }
 
 // IsInterfaceNil returns true if there is no value under the interface
